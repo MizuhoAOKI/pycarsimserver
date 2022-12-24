@@ -11,11 +11,6 @@ width="$WIDTH$" y="$HEIGHT$" viewBox="$VIEWBOX$" style="background:white;"  xml:
 </style>
 
 <g>
-	<!-- Reference path -->
-	<path id = "ref_path" class="st1" d="$REFERENCEPATH$"/>
-</g>
-
-<g>
 	<!-- Vehicle trajectory -->
 	<path id = "trajectory" class="st0" d="$TRAJECTORY$"/>
 </g>

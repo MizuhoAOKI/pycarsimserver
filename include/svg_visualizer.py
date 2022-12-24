@@ -4,7 +4,7 @@ import numpy as np
 # set svg template path
 SVG_TEMPLATE_PATH = '../template/svg_template.svg'
 
-def svg_visualizer(timestamp, car_x_ary, car_y_ary, ref_x_ary, ref_y_ary, outputpath, svgtemplate=SVG_TEMPLATE_PATH):
+def svg_visualizer(timestamp, car_x_ary, car_y_ary, outputpath, svgtemplate=SVG_TEMPLATE_PATH):
 
     # Set parameters
     MARGIN_RATE = 10 # % of maximum width/height
@@ -20,15 +20,12 @@ def svg_visualizer(timestamp, car_x_ary, car_y_ary, ref_x_ary, ref_y_ary, output
     svg_template.close()
 
     # Turn the y-axis upside down
-    maximum_y = max(max(car_y_ary), max(ref_y_ary))
+    maximum_y = max(car_y_ary)
     car_y_ary = maximum_y - car_y_ary
-    ref_y_ary = maximum_y - ref_y_ary
 
     # Scale data
     car_x_ary *= DATA_SCALE
     car_y_ary *= DATA_SCALE
-    ref_x_ary *= DATA_SCALE
-    ref_y_ary *= DATA_SCALE
 
     # Get several info from trajectory log
     min_x, max_x = min(car_x_ary), max(car_x_ary)
@@ -44,14 +41,9 @@ def svg_visualizer(timestamp, car_x_ary, car_y_ary, ref_x_ary, ref_y_ary, output
 
     # Set start point of the path.
     svg_path_code = "M " + str(car_x_ary[0]+margin_x) + "," + str(car_y_ary[0]+margin_y) + ", L"
-    ref_path_code = "M " + str(ref_x_ary[0]+margin_x) + "," + str(ref_y_ary[0]+margin_y) + ", L"
 
     # Set viewbox 
     viewbox_code = str(min_x) + "," + str(min_y) + "," + str(viewbox_width) + "," + str(viewbox_height)
-
-    # Set reference path
-    for i in range(len(ref_x_ary)):
-        ref_path_code += " " + str(ref_x_ary[i] + margin_x) + "," + str(ref_y_ary[i] + margin_y) + " "
 
     # Set vehicle trajectory
     for i in range(len(timestamp)):
@@ -68,7 +60,6 @@ def svg_visualizer(timestamp, car_x_ary, car_y_ary, ref_x_ary, ref_y_ary, output
             keypoints_code += "; "
 
     # Replace svg template
-    output = output.replace("$REFERENCEPATH$", ref_path_code)
     output = output.replace("$TRAJECTORY$"   , svg_path_code)
     output = output.replace("$VIEWBOX$"      , viewbox_code)
     output = output.replace("$WIDTH$"        , str(viewbox_width))

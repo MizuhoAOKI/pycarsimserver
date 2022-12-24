@@ -9,6 +9,8 @@ from PIL import Image
 import shutil
 import psutil
 from carsim_server import *
+from include.csvhandler import *
+from include.svg_visualizer import *
 
 # global parameters
 CARSIM_EXE_FILENAME = "CarSim_64.exe"
@@ -47,38 +49,32 @@ def search_process(process_name: str)->Any:
 
     return False
 
-# # Load csv and visualize svg animation
-# def gen_svg_anime():
-#     """ visualize results with svg animation """
+# Load csv and visualize svg animation
+def gen_svg_anime():
+    """ visualize results with svg animation """
 
-#     # settings
-#     CARSIM_CSV_LOG = os.path.join(".", "Results/vehicle_state_log.csv")
-#     OUTPUT_SVG_PATH = os.path.join(".", "svg_animation.svg")
+    # settings
+    CARSIM_CSV_LOG = os.path.join(".", "Results/*.csv")
+    OUTPUT_SVG_PATH = os.path.join(".", "svg_animation.svg")
 
-#     print("Loading reference path")
-#     ref = CSVHandler(glob.glob(VEHICLE_LOG))
-#     ref.read_csv(ignore_row_num=1)
+    # note that timestamp should start from 0.0
+    print("Loading vehicle state log")
+    log = CSVHandler(CARSIM_CSV_LOG)
+    log.read_csv(ignore_row_num=1)
 
-#     # Note that timestamp should start from 0.0
-#     print("Loading vehicle state log")
-#     log = CSVHandler(VEHICLE_LOG)
-#     log.read_csv(ignore_row_num=1)
+    print("Generate svg animation")
+    try:
+        svg_visualizer(
+            timestamp=np.ravel(log.points[:,0]), # set timestamp data
+            car_x_ary=np.ravel(log.points[:,1]), car_y_ary=np.ravel(log.points[:,2]), # set vehicle location in x-y plane
+            outputpath=OUTPUT_SVG_PATH # set output path of svg animation
+        )
+    except:
+        print("Error occured and program interruped.")
+        return False
 
-#     print("Generate svg animation")
-#     try:
-#         svg_visualizer(
-#             timestamp=np.ravel(log.points[:,0]), # set timestamp data
-#             car_x_ary=np.ravel(log.points[:,1]), car_y_ary=np.ravel(log.points[:,2]), # set vehicle location in x-y plane
-#             ref_x_ary=np.ravel(ref.points[:,0]), ref_y_ary=np.ravel(ref.points[:,1]), # set reference path points
-#             outputpath=OUTPUT_SVG_PATH # set output path of svg animation
-#         )
-#     except:
-#         print("Error occured and program interruped.")
-#         print(f"Check your csv files at {REFERENCE_PATH} and {VEHICLE_LOG}")
-#         return False
-
-#     print(f"Successfully output svg animation at {OUTPUT_SVG_PATH}")
-#     return True
+    print(f"Successfully output svg animation at {OUTPUT_SVG_PATH}")
+    return True
 
 def init():
     """ initialization processes """
@@ -140,7 +136,7 @@ def main():
             st.session_state.log = "Carsim run finished successfully."
         st.session_state.is_connection_active = False
         # write svg animation
-        
+        gen_svg_anime()
         refresh_page()
 
     # echo info
