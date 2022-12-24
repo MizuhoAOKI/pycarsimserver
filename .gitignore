@@ -1,4 +1,5 @@
 # custom
+.par
 *.zip
 .pypirc
 Results/
