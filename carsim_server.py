@@ -1,112 +1,103 @@
-""" carsim server for windows """
-import streamlit as st
-from typing import Any
+""" carsim_server """
+
 import sys
-import subprocess
-from PIL import Image
-import psutil
+import time
+import zmq
+import json
+from datetime import timedelta
+from pycarsimlib.core import CarsimManager
 
-# global parameters
-CARSIM_EXE_FILENAME = "CarSim_64.exe"
-CARSIM_LAUNCH_SH_PATH = r"C:/Users/mizuho/Desktop/CarSim2022.lnk"
+# constant params
+CARSIM_DB_DIR = r"C:\Users\Public\Documents\CarSim2022.1_Data"
+VEHICLE_TYPE = "normal_vehicle"
+SOCKET_CONFIG = "tcp://*:5555"
 
-# utilities
-def refresh_page():
-    """ func to reload page """
-    st.experimental_rerun()
-
-def launch_carsim_software():
-    """ func to launch carsim software """
-    CARSIM_LAUNCH_SH_PATH = r"C:/Users/mizuho/Desktop/CarSim2022.lnk"
+def is_json(s: str)->bool:
+    """ check if 's' follows json format or not """
     try:
-        print("[INFO] Launching carsim... ")
-        st.session_state.carsim_handler = subprocess.Popen(["start", CARSIM_LAUNCH_SH_PATH], shell=True)
-        st.session_state.is_carsim_active = True
-        print("[INFO] is_carsim_active : ", st.session_state.is_carsim_active)
-    except Exception as err_msg:
-        st.session_state.is_carsim_active = False
+        json.loads(s)
+    except ValueError as err_msg:
         print(err_msg)
-        return
+        return False
+    return True
 
-def search_process(process_name: str)->Any:
-    """ search process """
-    for proc in psutil.process_iter():
-        _buf = ""
-        try:
-            _buf = str(proc.exe())
-        except psutil.AccessDenied:
-            pass
+def launch_server()->None:
+    """ launch carsim_server and call api to run carsim """
 
-        if process_name in _buf:
-            st.session_state.is_carsim_active = True
-            return proc
+    # make socket
+    context = zmq.Context()
+    socket = context.socket(zmq.REP)
+    socket.bind(SOCKET_CONFIG)
 
-    return False
+    # make carsim instance
+    cm = CarsimManager(
+        carsim_db_dir=CARSIM_DB_DIR,
+        vehicle_type=VEHICLE_TYPE,
+    )
 
-def init():
-    """ initialization processes """
-    print("[INFO] Initializing website")
+    # start communication
+    try:
+        while True:
+            #  wait for next request from client
+            recv_msg = socket.recv()
 
-    # initialize session_states
-    if "is_connection_active" not in st.session_state:
-        st.session_state.is_connection_active = False
+            if recv_msg.decode() == "close":
+                print("[INFO] Termination flag is True. Close connection.")
+                socket.close()
+                break
 
-    # initialize carsim_satates
-    if "is_carsim_active" not in st.session_state:
-        st.session_state.is_carsim_active = False
+            if is_json(recv_msg):
+                json_recv_msg = json.loads(recv_msg)
+                print(json.dumps(json_recv_msg,indent=2)) # print json contexts
 
-        # for proc in psutil.process_iter():
-        #     _buf = ""
-        #     try:
-        #         _buf = str(proc.exe())
-        #     except psutil.AccessDenied:
-        #         _buf = "AccessDenied"
+                # parse msg
+                delta_time = float(json_recv_msg["dt"])
+                IMP_STEER_SW = float(json_recv_msg["control_input"]["IMP_STEER_SW"])
+                IMP_FBK_PDL = float(json_recv_msg["control_input"]["IMP_FBK_PDL"])
+                IMP_THROTTLE_ENGINE = float(json_recv_msg["control_input"]["IMP_THROTTLE_ENGINE"])
+            else:
+                print("[ERROR] Invalid message format.")
 
-        #     if CARSIM_EXE_FILENAME in _buf:
-        #         st.session_state.is_carsim_active = True
-        #         break
+            # prepare operational signals
+            if delta_time > 0.0:
+                control_inputs = {
+                    "IMP_STEER_SW": IMP_STEER_SW,
+                    "IMP_FBK_PDL": IMP_FBK_PDL,
+                    "IMP_THROTTLE_ENGINE": IMP_THROTTLE_ENGINE
+                }
+            else:
+                print("[ERROR] received delta_time is invalid. ")
+                socket.send_string("close")
+                socket.close()
+                break
 
-        search_process(CARSIM_EXE_FILENAME)
+            # update vehicle states
+            if delta_time > 0.0:
+                observed, terminated, updated_time_sec = cm.step(action=control_inputs, delta_time=timedelta(seconds=delta_time))
+                print(observed)
 
-    # initialize carsim handler
-    if "carsim_handler" not in st.session_state:
-        st.session_state.carsim_handler = 0
+            # check termination flag
+            if terminated:
+                print("[INFO] Termination flag is True. End of simulation.")
+                socket.send_string("close")
+                socket.close()
+                break
 
-    # layout settings
-    st.set_page_config(page_title="carsim", layout="centered")
+            #  Send reply back to client
+            ## データ成型する
+            send_msg = json.dumps(observed, indent=2)
+            socket.send(send_msg.encode())
 
-def main():
-    """ main process """
-    # init page
-    init()
+    # error handlings
+    except KeyboardInterrupt:
+        print("[WARNING] Process interrupted with Ctrl + C. ")
+    except Exception as err_msg:
+        print("[ERROR]", err_msg)
 
-    # title 
-    st.title("Carsim Server")
+    # close carsim
+    cm.close()
 
-    # eyecatch
-    ## load image
-    image = Image.open('./media/car.png')
-    st.image(image, width=200, output_format="PNG")
-
-    # button to launch carsim software
-    st.markdown("###### Step 1. launch carsim.")
-    if st.button("Launch carsim", disabled=st.session_state.is_carsim_active):
-        launch_carsim_software()
-        refresh_page()
-
-    # check if carsim software is active
-    st.markdown("###### Step 2. Check carsim status is True ")
-    st.write(" - Carsim status : ", st.session_state.is_carsim_active)
-
-    # button to start receiving command
-    st.markdown("###### Step 3. Connect socket ")
-    if st.button("Connect", disabled= (st.session_state.is_connection_active or (not st.session_state.is_carsim_active))):
-        st.session_state.is_connection_active = True
-        refresh_page()
-
-
-
-
+    # return status and result path to app.py => compress and download results dir from webapp
 
 if __name__ == "__main__":
-    main()
+    sys.exit(launch_server())
