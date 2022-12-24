@@ -1,6 +1,7 @@
 """ carsim server for windows """
 import streamlit as st
 from typing import Any
+import base64
 import os
 import glob
 import sys
@@ -54,8 +55,11 @@ def gen_svg_anime():
     """ visualize results with svg animation """
 
     # settings
-    CARSIM_CSV_LOG = os.path.join(".", "Results/*.csv")
-    OUTPUT_SVG_PATH = os.path.join(".", "svg_animation.svg")
+    CARSIM_CSV_LOG =  glob.glob('./Results/Run*/*.csv')[0]
+    OUTPUT_SVG_PATH = "./svg_animation.svg"
+
+    if os.path.exists(OUTPUT_SVG_PATH):
+        os.remove(OUTPUT_SVG_PATH)
 
     # note that timestamp should start from 0.0
     print("Loading vehicle state log")
@@ -66,15 +70,16 @@ def gen_svg_anime():
     try:
         svg_visualizer(
             timestamp=np.ravel(log.points[:,0]), # set timestamp data
-            car_x_ary=np.ravel(log.points[:,1]), car_y_ary=np.ravel(log.points[:,2]), # set vehicle location in x-y plane
+            car_x_ary=np.ravel(log.points[:,622]), car_y_ary=np.ravel(log.points[:,652]), # set vehicle location in x-y plane
             outputpath=OUTPUT_SVG_PATH # set output path of svg animation
         )
-    except:
+    except Exception as err_msg:
+        print(err_msg)
         print("Error occured and program interruped.")
-        return False
+        return True
 
     print(f"Successfully output svg animation at {OUTPUT_SVG_PATH}")
-    return True
+    return False
 
 def init():
     """ initialization processes """
@@ -104,6 +109,15 @@ def init():
     # layout settings
     st.set_page_config(page_title="carsim", layout="centered")
 
+def render_svg(svg_file):
+    """ load .svg file and generate html code """
+    with open(svg_file, "r") as f:
+        lines = f.readlines()
+        svg = "".join(lines)
+        b64 = base64.b64encode(svg.encode("utf-8")).decode("utf-8")
+        html = r'<img src="data:image/svg+xml;base64,%s"/>' % b64
+        return html
+
 def main():
     """ main process """
     # init page
@@ -129,7 +143,7 @@ def main():
     st.markdown("###### Step 2. Connect socket ")
     if st.button("Connect", disabled= (st.session_state.is_connection_active or (not st.session_state.is_carsim_active))):
         st.session_state.is_connection_active = True
-        st.info("Start sending signals.", icon="ℹ")
+        st.info("Receiving signals...", icon="ℹ")
         if launch_server():
             st.session_state.log = "Carsim run failed. Try again."
         else:
@@ -144,6 +158,11 @@ def main():
         st.info(st.session_state.log, icon="ℹ")
 
     if st.session_state.log == "Carsim run finished successfully.":
+        ## show svg animation 
+        st.markdown(
+        render_svg("./svg_animation.svg")
+        , unsafe_allow_html=True)
+
         # button to save results
         st.markdown("###### Step 3. Save latest results")
         # clear archives

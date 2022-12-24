@@ -4,6 +4,7 @@ import zmq
 import sys
 import time
 import json
+import numpy as np
 
 SLEEP_TIME=0.1 #[s]
 RECEIVER_TIMEOUT = 3 #[s]
@@ -20,13 +21,16 @@ def main() -> None:
     # initialize variables to send
     sim_time = 0.0
     dt = SLEEP_TIME
-    steer_angle = 2.0
-    throttle = 1.0
-    brake = 0.0
 
     try:
         # loop forever
         while True:
+
+            # dummy control inputs
+            steer_angle = 20 * np.sin(0.1 * sim_time)
+            throttle = 2.5 + 2.5 * np.sin(0.5 * sim_time)
+            brake = 0.0
+
             # prepare json message to send
             json_msg = {"dt": dt,
                             "control_input": {\

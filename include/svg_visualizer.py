@@ -2,7 +2,7 @@
 import numpy as np
 
 # set svg template path
-SVG_TEMPLATE_PATH = '../template/svg_template.svg'
+SVG_TEMPLATE_PATH = './template/svg_template.svg'
 
 def svg_visualizer(timestamp, car_x_ary, car_y_ary, outputpath, svgtemplate=SVG_TEMPLATE_PATH):
 
@@ -11,7 +11,7 @@ def svg_visualizer(timestamp, car_x_ary, car_y_ary, outputpath, svgtemplate=SVG_
     MIN_MARGIN_X = 100 # px
     MIN_MARGIN_Y = 100 # px
     DATA_SCALE = 10 # rate of magnification compared to the car
-    FF_SCALE = 1 # default: 1 means normal(1x) speed.
+    FF_SCALE = 1.0 # default: 1 means normal(1x) speed.
     SIM_TIME = timestamp[-1]
 
     # Load svg template
@@ -65,8 +65,8 @@ def svg_visualizer(timestamp, car_x_ary, car_y_ary, outputpath, svgtemplate=SVG_
     output = output.replace("$WIDTH$"        , str(viewbox_width))
     output = output.replace("$HEIGHT$"       , str(viewbox_height))
     output = output.replace("$SIMTIME$"      , str(SIM_TIME/FF_SCALE))
-    output = output.replace("$KEYTIMES$"     , keytimes_code)
-    output = output.replace("$KEYPOINTS$"    , keypoints_code)
+    # output = output.replace("$KEYTIMES$"     , keytimes_code)
+    # output = output.replace("$KEYPOINTS$"    , keypoints_code)
 
     # Output svg data
     svg_output = open(outputpath, 'w')

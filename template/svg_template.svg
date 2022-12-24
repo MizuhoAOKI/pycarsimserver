@@ -26,8 +26,12 @@ width="$WIDTH$" y="$HEIGHT$" viewBox="$VIEWBOX$" style="background:white;"  xml:
     </g>
 
 	<!-- Animation settings -->
-	<animateMotion
+	<!-- <animateMotion
 		dur = "$SIMTIME$s" repeatCount = "indefinite" rotate = "auto" calcMode="linear" keyPoints="$KEYPOINTS$" keyTimes="$KEYTIMES$">
+					<mpath xlink:href = "#trajectory"></mpath>
+	</animateMotion> -->
+	<animateMotion
+		dur = "$SIMTIME$s" repeatCount = "indefinite" rotate = "auto" calcMode="linear">
 					<mpath xlink:href = "#trajectory"></mpath>
 	</animateMotion>
 </g>
