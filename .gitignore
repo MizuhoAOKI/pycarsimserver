@@ -1,4 +1,5 @@
 # custom
+*.zip
 .pypirc
 Results/
 /outputs/*
