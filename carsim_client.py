@@ -6,6 +6,7 @@ import time
 import json
 
 SLEEP_TIME=0.1 #[s]
+RECEIVER_TIMEOUT = 3 #[s]
 
 def main() -> None:
     """ send command to carsim server """
@@ -14,6 +15,7 @@ def main() -> None:
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
     socket.connect("tcp://localhost:5555")
+    socket.RCVTIMEO = RECEIVER_TIMEOUT * 1000 # in milliseconds
 
     # initialize variables to send
     sim_time = 0.0
